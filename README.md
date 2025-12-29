@@ -1,6 +1,8 @@
 # Excalidraw Math Plotter
 
 Plot mathematical function graphs directly onto Excalidraw canvases in Obsidian.
+<img width="939" height="800" alt="image" src="https://github.com/user-attachments/assets/98f7ec68-3cad-410d-96a1-d5bbd37bf582" />
+
 
 ## Features
 
