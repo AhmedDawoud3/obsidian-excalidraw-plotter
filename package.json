@@ -1,5 +1,5 @@
 {
-    "name": "obsidian-excalidraw-plotter",
+    "name": "excalidraw-plotter",
     "version": "1.0.0",
     "description": "Plot mathematical function graphs directly onto Excalidraw canvases.",
     "main": "main.js",
