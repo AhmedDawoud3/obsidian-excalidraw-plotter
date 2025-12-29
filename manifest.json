@@ -1,0 +1,11 @@
+{
+    "id": "obsidian-excalidraw-plotter",
+    "name": "Excalidraw Math Plotter",
+    "version": "1.0.0",
+    "minAppVersion": "0.15.0",
+    "description": "Plot mathematical function graphs directly onto Excalidraw canvases.",
+    "author": "Ahmed Dawoud",
+    "authorUrl": "https://github.com/ahmeddawoud3",
+    "fundingUrl": "",
+    "isDesktopOnly": false
+}
