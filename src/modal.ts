@@ -1,8 +1,74 @@
 import { App, Modal, Notice, Setting } from "obsidian";
 import { MathEngine, Point, PointSegment } from "./math-engine";
-import { drawGraph, drawGraphSegments, deleteElements, getExcalidrawAPI } from "./drawing-engine";
+import { drawGraphSegments, deleteElements } from "./drawing-engine";
 import { ExcalidrawPlotterSettings, FUNCTION_PRESETS } from "./settings";
 import ExcalidrawPlotterPlugin from "./main";
+
+/**
+ * SVG namespace for creating SVG elements
+ */
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/**
+ * Create an SVG element with the specified paths
+ */
+function createSvgIcon(
+    container: HTMLElement,
+    width: number,
+    height: number,
+    paths: { tag: string; attrs: Record<string, string> }[]
+): SVGSVGElement {
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("xmlns", SVG_NS);
+    svg.setAttribute("width", width.toString());
+    svg.setAttribute("height", height.toString());
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "2");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+
+    for (const pathDef of paths) {
+        const el = document.createElementNS(SVG_NS, pathDef.tag);
+        for (const [key, value] of Object.entries(pathDef.attrs)) {
+            el.setAttribute(key, value);
+        }
+        svg.appendChild(el);
+    }
+
+    container.appendChild(svg);
+    return svg;
+}
+
+/**
+ * Predefined SVG icon definitions
+ */
+const SVG_ICONS = {
+    pencil: [
+        { tag: "path", attrs: { d: "M12 20h9" } },
+        { tag: "path", attrs: { d: "M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" } },
+    ],
+    target: [
+        { tag: "circle", attrs: { cx: "12", cy: "12", r: "10" } },
+        { tag: "circle", attrs: { cx: "12", cy: "12", r: "3" } },
+    ],
+    pulse: [
+        { tag: "path", attrs: { d: "M22 12h-4l-3 9L9 3l-3 9H2" } },
+    ],
+    trash: [
+        { tag: "path", attrs: { d: "M3 6h18" } },
+        { tag: "path", attrs: { d: "M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" } },
+        { tag: "path", attrs: { d: "M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" } },
+    ],
+    check: [
+        { tag: "polyline", attrs: { points: "20 6 9 17 4 12" } },
+    ],
+    zigzag: [
+        { tag: "polyline", attrs: { points: "3 6 9 3 15 9 21 6" } },
+        { tag: "polyline", attrs: { points: "3 18 9 15 15 21 21 18" } },
+    ],
+};
 
 /**
  * Modal for configuring and inserting a function graph
@@ -105,12 +171,12 @@ export class GraphSettingsModal extends Modal {
 
         // Equation input
         new Setting(contentEl)
-            .setName("Equation")
-            .setDesc("Mathematical expression using x as variable (e.g., sin(x), x^2, log(x))")
+            .setName("Formula")
+            .setDesc("Enter an expression")
             .addText((text) => {
                 equationInput = text.inputEl;
                 text
-                    .setPlaceholder("sin(x)")
+                    .setPlaceholder("Enter formula")
                     .setValue(this.equation)
                     .onChange((value) => {
                         this.equation = value;
@@ -120,7 +186,7 @@ export class GraphSettingsModal extends Modal {
         // X Range - Min
         new Setting(contentEl)
             .setName("X minimum")
-            .setDesc("Starting value for x")
+            .setDesc("Starting value for X")
             .addText((text) => {
                 xMinInput = text.inputEl;
                 text
@@ -137,7 +203,7 @@ export class GraphSettingsModal extends Modal {
         // X Range - Max
         new Setting(contentEl)
             .setName("X maximum")
-            .setDesc("Ending value for x")
+            .setDesc("Ending value for X")
             .addText((text) => {
                 xMaxInput = text.inputEl;
                 text
@@ -156,8 +222,8 @@ export class GraphSettingsModal extends Modal {
         let yMaxInput: HTMLInputElement | null = null;
 
         new Setting(contentEl)
-            .setName("Constrain Y range")
-            .setDesc("Limit the vertical range (useful for tan, 1/x, etc.)")
+            .setName("Constrain y-range")
+            .setDesc("Limit the vertical range")
             .addToggle((toggle) =>
                 toggle
                     .setValue(this.useYLimits)
@@ -219,7 +285,7 @@ export class GraphSettingsModal extends Modal {
         // Y Scale
         new Setting(contentEl)
             .setName("Y scale")
-            .setDesc("Pixels per unit on Y axis (higher = taller)")
+            .setDesc("Pixels per unit on y-axis (higher = taller)")
             .addText((text) =>
                 text
                     .setPlaceholder("50")
@@ -280,7 +346,7 @@ export class GraphSettingsModal extends Modal {
         // Y Tick interval
         new Setting(contentEl)
             .setName("Y tick interval")
-            .setDesc("Spacing between tick marks on Y axis")
+            .setDesc("Spacing between tick marks on y-axis")
             .addText((text) =>
                 text
                     .setPlaceholder("1")
@@ -343,8 +409,8 @@ export class GraphSettingsModal extends Modal {
 
         // Force show Y-axis toggle
         new Setting(contentEl)
-            .setName("Force show Y-axis")
-            .setDesc("Always display Y-axis even if x=0 is outside range")
+            .setName("Force y-axis visibility")
+            .setDesc("Always display y-axis even if outside range")
             .addToggle((toggle) =>
                 toggle
                     .setValue(this.forceShowYAxis)
@@ -368,8 +434,8 @@ export class GraphSettingsModal extends Modal {
 
         // Custom X ticks
         new Setting(contentEl)
-            .setName("Custom X ticks")
-            .setDesc("Force specific X values (comma-separated, e.g., -1, 0, 1)")
+            .setName("Horizontal tick marks")
+            .setDesc("Comma-separated values")
             .addText((text) =>
                 text
                     .setPlaceholder("-1, 0, 1")
@@ -381,8 +447,8 @@ export class GraphSettingsModal extends Modal {
 
         // Custom Y ticks
         new Setting(contentEl)
-            .setName("Custom Y ticks")
-            .setDesc("Force specific Y values (comma-separated, e.g., -1, 1)")
+            .setName("Custom y-ticks")
+            .setDesc("Specify y values")
             .addText((text) =>
                 text
                     .setPlaceholder("-1, 1")
@@ -406,7 +472,7 @@ export class GraphSettingsModal extends Modal {
                     .setButtonText("Insert graph")
                     .setCta()
                     .onClick(() => {
-                        this.handleSubmit();
+                        void this.handleSubmit();
                     })
             )
             .addButton((btn) =>
@@ -636,7 +702,7 @@ class TolerancePreviewModal extends Modal {
         // Header section
         const header = contentEl.createEl("div", { cls: "preview-header" });
         const headerIcon = header.createEl("div", { cls: "preview-header-icon" });
-        headerIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`;
+        createSvgIcon(headerIcon, 20, 20, SVG_ICONS.pencil);
         const headerText = header.createEl("div", { cls: "preview-header-text" });
         headerText.createEl("span", { text: "Curve optimization", cls: "preview-title" });
         headerText.createEl("span", { text: "Adjust point density", cls: "preview-subtitle" });
@@ -657,7 +723,7 @@ class TolerancePreviewModal extends Modal {
 
         const rangeStat = statsBar.createEl("div", { cls: "preview-stat" });
         rangeStat.createEl("span", { text: `[${this.xMin}, ${this.xMax}]`, cls: "stat-value" });
-        rangeStat.createEl("span", { text: "x range", cls: "stat-label" });
+        rangeStat.createEl("span", { text: "X range", cls: "stat-label" });
 
         // Quality control section
         const qualitySection = contentEl.createEl("div", { cls: "preview-quality-section" });
@@ -685,18 +751,18 @@ class TolerancePreviewModal extends Modal {
 
         const rightLabel = sliderRow.createEl("div", { cls: "slider-endpoint" });
         rightLabel.createEl("span", { text: "●", cls: "endpoint-dots low" });
-        rightLabel.createEl("span", { text: "Minimal", cls: "slider-label" });
+        rightLabel.createEl("span", { text: "Simple", cls: "slider-label" });
 
         // Points counter
         const pointsDisplay = qualitySection.createEl("div", { cls: "preview-points-display" });
         const pointsIcon = pointsDisplay.createEl("span", { cls: "points-icon" });
-        pointsIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>`;
+        createSvgIcon(pointsIcon, 14, 14, SVG_ICONS.target);
         const pointsText = pointsDisplay.createEl("span", { cls: "points-text" });
 
         // Edge style badge
         const edgeInfoEl = contentEl.createEl("div", { cls: "preview-edge-badge" });
         const edgeIcon = edgeInfoEl.createEl("span", { cls: "edge-icon" });
-        edgeIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`;
+        createSvgIcon(edgeIcon, 12, 12, SVG_ICONS.pulse);
         edgeInfoEl.createEl("span", {
             text: "Auto-detecting curve style...",
             cls: "edge-info-text",
@@ -715,9 +781,9 @@ class TolerancePreviewModal extends Modal {
         const cancelBtn = buttonContainer.createEl("button", {
             cls: "preview-cancel-btn",
         });
-        cancelBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`;
+        createSvgIcon(cancelBtn, 14, 14, SVG_ICONS.trash);
         cancelBtn.createEl("span", { text: "Discard" });
-        cancelBtn.addEventListener("click", async () => {
+        cancelBtn.addEventListener("click", () => {
             // Delete the drawn elements and close
             if (this.currentElementIds.length > 0) {
                 deleteElements(this.app, this.currentElementIds);
@@ -728,22 +794,23 @@ class TolerancePreviewModal extends Modal {
         const doneBtn = buttonContainer.createEl("button", {
             cls: "mod-cta preview-done-btn",
         });
-        doneBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+        createSvgIcon(doneBtn, 14, 14, SVG_ICONS.check);
         doneBtn.createEl("span", { text: "Apply" });
-        doneBtn.addEventListener("click", async () => {
+        doneBtn.addEventListener("click", () => {
             // Save tolerance setting
-            this.plugin.settings.lastTolerance = this.tolerance;
-            await this.plugin.saveSettings();
-
-            new Notice(`Graph inserted!`);
-            this.onSubmit();
-            this.close();
+            void (async () => {
+                this.plugin.settings.lastTolerance = this.tolerance;
+                await this.plugin.saveSettings();
+                new Notice("Graph inserted!");
+                this.onSubmit();
+                this.close();
+            })();
         });
 
         // Keyboard shortcut hint
         const keyHint = contentEl.createEl("div", { cls: "preview-key-hint" });
         keyHint.createEl("kbd", { text: "Enter" });
-        keyHint.createEl("span", { text: "to apply" });
+        keyHint.createEl("span", { text: "To apply" });
 
         // Register keyboard handler
         this.scope.register([], "Enter", async () => {
@@ -775,7 +842,7 @@ class TolerancePreviewModal extends Modal {
      */
     private updateQualityIndicator(qualityFill: HTMLElement, qualityLabel: HTMLElement) {
         const quality = 100 - ((this.tolerance - 1) / 49 * 100);
-        qualityFill.style.width = `${quality}%`;
+        qualityFill.setCssProps({ "width": `${quality}%` });
 
         // Update color based on quality level
         if (quality >= 70) {
@@ -796,7 +863,7 @@ class TolerancePreviewModal extends Modal {
             window.clearTimeout(this.debounceTimer);
         }
         this.debounceTimer = window.setTimeout(() => {
-            this.drawWithTolerance(this.tolerance, pointsText, edgeInfoEl);
+            void this.drawWithTolerance(this.tolerance, pointsText, edgeInfoEl);
         }, 50);
     }
 
@@ -916,10 +983,9 @@ class TolerancePreviewModal extends Modal {
             }
             // Update icon based on style
             const edgeIcon = edgeInfoEl.querySelector(".edge-icon");
-            if (edgeIcon) {
-                edgeIcon.innerHTML = useRoundEdges
-                    ? `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`
-                    : `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 9 3 15 9 21 6"/><polyline points="3 18 9 15 15 21 21 18"/></svg>`;
+            if (edgeIcon instanceof HTMLElement) {
+                edgeIcon.empty();
+                createSvgIcon(edgeIcon, 12, 12, useRoundEdges ? SVG_ICONS.pulse : SVG_ICONS.zigzag);
             }
         }
 

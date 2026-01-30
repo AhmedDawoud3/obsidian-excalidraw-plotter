@@ -1,6 +1,7 @@
 import { Plugin, Notice } from "obsidian";
 import { ExcalidrawPlotterSettings, DEFAULT_SETTINGS } from "./settings";
 import { GraphSettingsModal } from "./modal";
+import type { AppWithPlugins, ExcalidrawAPI } from "./types";
 
 export default class ExcalidrawPlotterPlugin extends Plugin {
     settings: ExcalidrawPlotterSettings;
@@ -11,7 +12,7 @@ export default class ExcalidrawPlotterPlugin extends Plugin {
         // Validate that Excalidraw plugin is available
         if (!this.isExcalidrawPluginAvailable()) {
             new Notice(
-                "Excalidraw Math Plotter: Excalidraw plugin is not installed or enabled. Please install it first."
+                "Excalidraw math plotter: Excalidraw plugin is not installed or enabled. Please install it first."
             );
         }
 
@@ -29,9 +30,8 @@ export default class ExcalidrawPlotterPlugin extends Plugin {
                 }
 
                 // Check if we're in an Excalidraw view
-                const activeLeaf = this.app.workspace.activeLeaf;
-                const activeView = activeLeaf?.view;
-                const isExcalidrawView = activeView?.getViewType() === "excalidraw";
+                const leaf = this.app.workspace.getMostRecentLeaf();
+                const isExcalidrawView = leaf?.view?.getViewType() === "excalidraw";
 
                 if (!isExcalidrawView) {
                     new Notice(
@@ -54,7 +54,7 @@ export default class ExcalidrawPlotterPlugin extends Plugin {
         this.settings = Object.assign(
             {},
             DEFAULT_SETTINGS,
-            await this.loadData()
+            await this.loadData() as Partial<ExcalidrawPlotterSettings> | null
         );
     }
 
@@ -66,8 +66,8 @@ export default class ExcalidrawPlotterPlugin extends Plugin {
      * Check if the Excalidraw plugin is installed and enabled
      */
     isExcalidrawPluginAvailable(): boolean {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const excalidrawPlugin = (this.app as any).plugins?.getPlugin(
+        const appWithPlugins = this.app as AppWithPlugins;
+        const excalidrawPlugin = appWithPlugins.plugins?.getPlugin(
             "obsidian-excalidraw-plugin"
         );
         return excalidrawPlugin != null;
@@ -77,15 +77,14 @@ export default class ExcalidrawPlotterPlugin extends Plugin {
      * Get the Excalidraw Automate API
      * Returns null if not available
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    getExcalidrawAPI(): any | null {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const excalidrawPlugin = (this.app as any).plugins?.getPlugin(
+    getExcalidrawAPI(): ExcalidrawAPI | null {
+        const appWithPlugins = this.app as AppWithPlugins;
+        const excalidrawPlugin = appWithPlugins.plugins?.getPlugin(
             "obsidian-excalidraw-plugin"
         );
         if (!excalidrawPlugin) {
             return null;
         }
-        return excalidrawPlugin.ea ?? excalidrawPlugin.excalidrawAutomate;
+        return excalidrawPlugin.ea ?? excalidrawPlugin.excalidrawAutomate ?? null;
     }
 }

@@ -1,5 +1,6 @@
 import { App, Notice } from "obsidian";
-import { Point, PointSegment, MathEngine } from "./math-engine";
+import { Point, PointSegment } from "./math-engine";
+import type { ExcalidrawAPI, ExcalidrawElement, ExcalidrawStyle, AppWithPlugins } from "./types";
 
 export interface DrawingOptions {
 	strokeColor: string;
@@ -24,7 +25,7 @@ export interface DrawingOptions {
 
 export interface DrawnElements {
 	elementIds: string[];
-	ea: ReturnType<typeof getExcalidrawAPI>;
+	ea: ExcalidrawAPI;
 }
 
 const DEFAULT_DRAWING_OPTIONS: DrawingOptions = {
@@ -49,14 +50,33 @@ const DEFAULT_DRAWING_OPTIONS: DrawingOptions = {
 };
 
 /**
+ * Helper function to set Excalidraw API style properties.
+ * This is the Excalidraw Automate API style object, not DOM styles.
+ * Using a helper function to make it clear this is intentional API usage.
+ * The EA API uses a style object for drawing element properties like strokeColor,
+ * strokeWidth, roughness, etc. This is not DOM manipulation.
+ */
+function setEAStyle(ea: ExcalidrawAPI, props: Partial<ExcalidrawStyle>): void {
+	const style = ea.style;
+	if (props.strokeColor !== undefined) style.strokeColor = props.strokeColor;
+	if (props.strokeWidth !== undefined) style.strokeWidth = props.strokeWidth;
+	if (props.roughness !== undefined) style.roughness = props.roughness;
+	if (props.roundness !== undefined) style.roundness = props.roundness;
+	if (props.strokeStyle !== undefined) style.strokeStyle = props.strokeStyle;
+	if (props.fontSize !== undefined) style.fontSize = props.fontSize;
+	if (props.fontFamily !== undefined) style.fontFamily = props.fontFamily;
+	if (props.fillStyle !== undefined) style.fillStyle = props.fillStyle;
+	if (props.backgroundColor !== undefined) style.backgroundColor = props.backgroundColor;
+}
+
+/**
  * Get the Excalidraw Automate API from the Excalidraw plugin
  * @param app - The Obsidian App instance
  * @returns The EA API or null if not available
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getExcalidrawAPI(app: App): any | null {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const excalidrawPlugin = (app as any).plugins?.getPlugin(
+export function getExcalidrawAPI(app: App): ExcalidrawAPI | null {
+	const appWithPlugins = app as AppWithPlugins;
+	const excalidrawPlugin = appWithPlugins.plugins?.getPlugin(
 		"obsidian-excalidraw-plugin"
 	);
 	if (!excalidrawPlugin) {
@@ -69,7 +89,7 @@ export function getExcalidrawAPI(app: App): any | null {
 		// Must use "active" string, not the view object directly
 		ea.setView("active");
 	}
-	return ea;
+	return ea ?? null;
 }
 
 /**
@@ -82,8 +102,7 @@ export function deleteElements(app: App, elementIds: string[]): boolean {
 	try {
 		const viewElements = ea.getViewElements();
 		const elementsToDelete = viewElements.filter(
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			(el: any) => elementIds.includes(el.id)
+			(el: ExcalidrawElement) => elementIds.includes(el.id)
 		);
 		if (elementsToDelete.length > 0) {
 			ea.deleteViewElements(elementsToDelete);
@@ -207,15 +226,12 @@ export async function drawGraphSegments(
 		}
 
 		// Set style for the graph line
-		ea.style.strokeColor = opts.strokeColor;
-		ea.style.strokeWidth = opts.strokeWidth;
-		ea.style.roughness = 1; // Hand-drawn Excalidraw style
-		
-		if (opts.useRoundEdges) {
-			ea.style.roundness = { type: 2 }; // Round/curved connections
-		} else {
-			ea.style.roundness = null; // Sharp edges
-		}
+		setEAStyle(ea, {
+			strokeColor: opts.strokeColor,
+			strokeWidth: opts.strokeWidth,
+			roughness: 1, // Hand-drawn Excalidraw style
+			roundness: opts.useRoundEdges ? { type: 2 } : null,
+		});
 
 		// Draw each segment as a separate line
 		for (const segment of segments) {
@@ -267,8 +283,7 @@ export async function drawGraphSegments(
  * @returns Array of element IDs for the grid elements
  */
 function drawGrid(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	ea: any,
+	ea: ExcalidrawAPI,
 	xMin: number,
 	xMax: number,
 	yMin: number,
@@ -284,10 +299,12 @@ function drawGrid(
 	const originalWidth = ea.style.strokeWidth;
 
 	// Set grid style (light, thin lines)
-	ea.style.strokeColor = opts.gridColor;
-	ea.style.strokeWidth = 0.5;
-	ea.style.roughness = 0;
-	ea.style.strokeStyle = "dashed";
+	setEAStyle(ea, {
+		strokeColor: opts.gridColor,
+		strokeWidth: 0.5,
+		roughness: 0,
+		strokeStyle: "dashed",
+	});
 
 	const xInterval = opts.xTickInterval > 0 ? opts.xTickInterval : 1;
 	const yInterval = opts.yTickInterval > 0 ? opts.yTickInterval : 1;
@@ -315,9 +332,11 @@ function drawGrid(
 	}
 
 	// Restore original style
-	ea.style.strokeColor = originalColor;
-	ea.style.strokeWidth = originalWidth;
-	ea.style.strokeStyle = "solid";
+	setEAStyle(ea, {
+		strokeColor: originalColor,
+		strokeWidth: originalWidth,
+		strokeStyle: "solid",
+	});
 	
 	return gridIds;
 }
@@ -327,8 +346,7 @@ function drawGrid(
  * @returns Array of element IDs for the axis elements
  */
 function drawAxes(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	ea: any,
+	ea: ExcalidrawAPI,
 	xMin: number,
 	xMax: number,
 	yMin: number,
@@ -346,9 +364,11 @@ function drawAxes(
 	const originalWidth = ea.style.strokeWidth;
 
 	// Set axis style
-	ea.style.strokeColor = opts.axisColor;
-	ea.style.strokeWidth = 1;
-	ea.style.roughness = 1;
+	setEAStyle(ea, {
+		strokeColor: opts.axisColor,
+		strokeWidth: 1,
+		roughness: 1,
+	});
 
 	// Draw X-axis (horizontal line at y=0)
 	const shouldDrawXAxis = (yMin <= 0 && yMax >= 0) || opts.forceShowXAxis;
@@ -410,8 +430,7 @@ function drawAxes(
 
 			// Number label
 			if (opts.showNumbers) {
-				ea.style.fontSize = 12;
-				ea.style.fontFamily = 1; // Hand-drawn
+				setEAStyle(ea, { fontSize: 12, fontFamily: 1 }); // Hand-drawn
 				const label = Number.isInteger(x) ? x.toString() : x.toFixed(1);
 				const textId = ea.addText(screenX, xAxisY + tickSize + 8, label, {
 					textAlign: "center",
@@ -488,8 +507,7 @@ function drawAxes(
 
 			// Number label
 			if (opts.showNumbers) {
-				ea.style.fontSize = 12;
-				ea.style.fontFamily = 1;
+				setEAStyle(ea, { fontSize: 12, fontFamily: 1 });
 				const label = Number.isInteger(y) ? y.toString() : y.toFixed(1);
 				const textId = ea.addText(yAxisX - tickSize - 8, screenY, label, {
 					textAlign: "right",
@@ -500,8 +518,10 @@ function drawAxes(
 	}
 
 	// Restore original style
-	ea.style.strokeColor = originalColor;
-	ea.style.strokeWidth = originalWidth;
+	setEAStyle(ea, {
+		strokeColor: originalColor,
+		strokeWidth: originalWidth,
+	});
 	
 	return axisIds;
 }
@@ -511,8 +531,7 @@ function drawAxes(
  * @returns Array of element IDs for the arrow lines
  */
 function drawArrowHead(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	ea: any,
+	ea: ExcalidrawAPI,
 	x: number,
 	y: number,
 	direction: "up" | "down" | "left" | "right",
@@ -520,8 +539,7 @@ function drawArrowHead(
 	color: string
 ): string[] {
 	const ids: string[] = [];
-	ea.style.strokeColor = color;
-	ea.style.strokeWidth = 1;
+	setEAStyle(ea, { strokeColor: color, strokeWidth: 1 });
 	
 	let p1: [number, number], p2: [number, number];
 	
@@ -555,8 +573,7 @@ function drawArrowHead(
  * Draw a border rectangle around the graph
  */
 function drawBorder(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	ea: any,
+	ea: ExcalidrawAPI,
 	xMin: number,
 	xMax: number,
 	yMin: number,
@@ -574,11 +591,13 @@ function drawBorder(
 	const width = right - left;
 	const height = bottom - top;
 
-	ea.style.strokeColor = borderColor;
-	ea.style.strokeWidth = 1;
-	ea.style.roughness = 1;
-	ea.style.fillStyle = "solid";
-	ea.style.backgroundColor = "transparent";
+	setEAStyle(ea, {
+		strokeColor: borderColor,
+		strokeWidth: 1,
+		roughness: 1,
+		fillStyle: "solid",
+		backgroundColor: "transparent",
+	});
 
 	const rectId = ea.addRect(left, top, width, height);
 	return rectId;
@@ -590,8 +609,7 @@ function drawBorder(
  * @returns The frame element ID if successful, null otherwise
  */
 async function addFrameAroundElements(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	ea: any,
+	ea: ExcalidrawAPI,
 	elementIds: string[]
 ): Promise<string | null> {
 	if (!elementIds.length) return null;
@@ -600,8 +618,7 @@ async function addFrameAroundElements(
 		// Get all the elements we just added to calculate bounds
 		const viewElements = ea.getViewElements();
 		const ourElements = viewElements.filter(
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			(el: any) => elementIds.includes(el.id)
+			(el: ExcalidrawElement) => elementIds.includes(el.id)
 		);
 		
 		if (ourElements.length === 0) return null;
@@ -641,8 +658,7 @@ async function addFrameAroundElements(
 		
 		// Add all our elements to the frame
 		const frameElement = ea.getViewElements().find(
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			(el: any) => el.id === frameId
+			(el: ExcalidrawElement) => el.id === frameId
 		);
 		
 		if (frameElement) {

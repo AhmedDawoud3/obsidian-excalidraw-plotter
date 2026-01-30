@@ -42,7 +42,7 @@ export class MathEngine {
 		let compiledExpression: math.EvalFunction;
 		try {
 			compiledExpression = math.compile(formula);
-		} catch (error) {
+		} catch {
 			throw new Error(
 				`Invalid formula: "${formula}". Please check your syntax.`
 			);
@@ -51,7 +51,7 @@ export class MathEngine {
 		// Iterate over the x range and evaluate y for each x
 		for (let x = xMin; x <= xMax; x += step) {
 			try {
-				const y = compiledExpression.evaluate({ x: x });
+				const y: unknown = compiledExpression.evaluate({ x: x });
 
 				// Only include valid numeric results
 				if (
@@ -93,7 +93,7 @@ export class MathEngine {
 		let compiledExpression: math.EvalFunction;
 		try {
 			compiledExpression = math.compile(formula);
-		} catch (error) {
+		} catch {
 			throw new Error(
 				`Invalid formula: "${formula}". Please check your syntax.`
 			);
@@ -104,7 +104,7 @@ export class MathEngine {
 		// Iterate over the x range and evaluate y for each x
 		for (let x = xMin; x <= xMax; x += step) {
 			try {
-				const y = compiledExpression.evaluate({ x: x });
+				const y: unknown = compiledExpression.evaluate({ x: x });
 
 				// Only include valid numeric results
 				if (typeof y === "number" && isFinite(y) && !isNaN(y)) {
