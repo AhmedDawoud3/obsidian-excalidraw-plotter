@@ -26,7 +26,8 @@ jobs:
             styles.css
             manifest.json
       - name: Create release
-        env: { GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="${GITHUB_REF#refs/tags/}"
           gh release create "$tag" main.js manifest.json styles.css \
