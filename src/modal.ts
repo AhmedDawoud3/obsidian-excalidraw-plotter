@@ -18,7 +18,7 @@ function createSvgIcon(
     height: number,
     paths: { tag: string; attrs: Record<string, string> }[]
 ): SVGSVGElement {
-    const svg = document.createElementNS(SVG_NS, "svg");
+    const svg = activeDocument.createElementNS(SVG_NS, "svg");
     svg.setAttribute("xmlns", SVG_NS);
     svg.setAttribute("width", width.toString());
     svg.setAttribute("height", height.toString());
@@ -30,7 +30,7 @@ function createSvgIcon(
     svg.setAttribute("stroke-linejoin", "round");
 
     for (const pathDef of paths) {
-        const el = document.createElementNS(SVG_NS, pathDef.tag);
+        const el = activeDocument.createElementNS(SVG_NS, pathDef.tag);
         for (const [key, value] of Object.entries(pathDef.attrs)) {
             el.setAttribute(key, value);
         }
@@ -140,12 +140,12 @@ export class GraphSettingsModal extends Modal {
         contentEl.createEl("h2", { text: "Insert function graph" });
 
         // Quick preset buttons
-        const presetsContainer = contentEl.createEl("div", {
+        const presetsContainer = contentEl.createDiv({
             cls: "excalidraw-plotter-presets",
         });
-        presetsContainer.createEl("span", { text: "Quick presets: ", cls: "presets-label" });
+        presetsContainer.createSpan({ text: "Quick presets: ", cls: "presets-label" });
 
-        const presetsButtons = presetsContainer.createEl("div", { cls: "presets-buttons" });
+        const presetsButtons = presetsContainer.createDiv({ cls: "presets-buttons" });
 
         // Create equation input reference for updating
         let equationInput: HTMLInputElement | null = null;
@@ -458,7 +458,7 @@ export class GraphSettingsModal extends Modal {
                     })
             );
         // Example formulas hint
-        const examplesEl = contentEl.createEl("div", {
+        const examplesEl = contentEl.createDiv({
             cls: "excalidraw-plotter-examples",
         });
         examplesEl.createEl("small", {
@@ -700,48 +700,48 @@ class TolerancePreviewModal extends Modal {
         this.maxRange = Math.max(yRange, xRange, 1);
 
         // Header section
-        const header = contentEl.createEl("div", { cls: "preview-header" });
-        const headerIcon = header.createEl("div", { cls: "preview-header-icon" });
+        const header = contentEl.createDiv({ cls: "preview-header" });
+        const headerIcon = header.createDiv({ cls: "preview-header-icon" });
         createSvgIcon(headerIcon, 20, 20, SVG_ICONS.pencil);
-        const headerText = header.createEl("div", { cls: "preview-header-text" });
-        headerText.createEl("span", { text: "Curve optimization", cls: "preview-title" });
-        headerText.createEl("span", { text: "Adjust point density", cls: "preview-subtitle" });
+        const headerText = header.createDiv({ cls: "preview-header-text" });
+        headerText.createSpan({ text: "Curve optimization", cls: "preview-title" });
+        headerText.createSpan({ text: "Adjust point density", cls: "preview-subtitle" });
 
         // Equation display with label
-        const equationSection = contentEl.createEl("div", { cls: "preview-equation-section" });
-        equationSection.createEl("span", { text: "Function", cls: "preview-section-label" });
+        const equationSection = contentEl.createDiv({ cls: "preview-equation-section" });
+        equationSection.createSpan({ text: "Function", cls: "preview-section-label" });
         equationSection.createEl("code", {
             text: `y = ${this.equation}`,
             cls: "preview-equation",
         });
 
         // Stats bar (segments + range info)
-        const statsBar = contentEl.createEl("div", { cls: "preview-stats-bar" });
-        const segmentStat = statsBar.createEl("div", { cls: "preview-stat" });
-        segmentStat.createEl("span", { text: this.rawSegments.length.toString(), cls: "stat-value" });
-        segmentStat.createEl("span", { text: this.rawSegments.length === 1 ? "segment" : "segments", cls: "stat-label" });
+        const statsBar = contentEl.createDiv({ cls: "preview-stats-bar" });
+        const segmentStat = statsBar.createDiv({ cls: "preview-stat" });
+        segmentStat.createSpan({ text: this.rawSegments.length.toString(), cls: "stat-value" });
+        segmentStat.createSpan({ text: this.rawSegments.length === 1 ? "segment" : "segments", cls: "stat-label" });
 
-        const rangeStat = statsBar.createEl("div", { cls: "preview-stat" });
-        rangeStat.createEl("span", { text: `[${this.xMin}, ${this.xMax}]`, cls: "stat-value" });
-        rangeStat.createEl("span", { text: "X range", cls: "stat-label" });
+        const rangeStat = statsBar.createDiv({ cls: "preview-stat" });
+        rangeStat.createSpan({ text: `[${this.xMin}, ${this.xMax}]`, cls: "stat-value" });
+        rangeStat.createSpan({ text: "X range", cls: "stat-label" });
 
         // Quality control section
-        const qualitySection = contentEl.createEl("div", { cls: "preview-quality-section" });
-        qualitySection.createEl("span", { text: "Quality", cls: "preview-section-label" });
+        const qualitySection = contentEl.createDiv({ cls: "preview-quality-section" });
+        qualitySection.createSpan({ text: "Quality", cls: "preview-section-label" });
 
         // Quality indicator bar
-        const qualityIndicator = qualitySection.createEl("div", { cls: "preview-quality-indicator" });
-        const qualityBar = qualityIndicator.createEl("div", { cls: "quality-bar" });
-        const qualityFill = qualityBar.createEl("div", { cls: "quality-fill" });
-        const qualityLabel = qualityIndicator.createEl("span", { cls: "quality-label" });
+        const qualityIndicator = qualitySection.createDiv({ cls: "preview-quality-indicator" });
+        const qualityBar = qualityIndicator.createDiv({ cls: "quality-bar" });
+        const qualityFill = qualityBar.createDiv({ cls: "quality-fill" });
+        const qualityLabel = qualityIndicator.createSpan({ cls: "quality-label" });
 
         // Slider with labels
-        const sliderContainer = qualitySection.createEl("div", { cls: "preview-slider-container" });
-        const sliderRow = sliderContainer.createEl("div", { cls: "preview-slider-row" });
+        const sliderContainer = qualitySection.createDiv({ cls: "preview-slider-container" });
+        const sliderRow = sliderContainer.createDiv({ cls: "preview-slider-row" });
 
-        const leftLabel = sliderRow.createEl("div", { cls: "slider-endpoint" });
-        leftLabel.createEl("span", { text: "●●●", cls: "endpoint-dots high" });
-        leftLabel.createEl("span", { text: "Precise", cls: "slider-label" });
+        const leftLabel = sliderRow.createDiv({ cls: "slider-endpoint" });
+        leftLabel.createSpan({ text: "●●●", cls: "endpoint-dots high" });
+        leftLabel.createSpan({ text: "Precise", cls: "slider-label" });
 
         const slider = sliderRow.createEl("input", { cls: "preview-slider" });
         slider.type = "range";
@@ -749,21 +749,21 @@ class TolerancePreviewModal extends Modal {
         slider.max = "50";
         slider.value = this.tolerance.toString();
 
-        const rightLabel = sliderRow.createEl("div", { cls: "slider-endpoint" });
-        rightLabel.createEl("span", { text: "●", cls: "endpoint-dots low" });
-        rightLabel.createEl("span", { text: "Simple", cls: "slider-label" });
+        const rightLabel = sliderRow.createDiv({ cls: "slider-endpoint" });
+        rightLabel.createSpan({ text: "●", cls: "endpoint-dots low" });
+        rightLabel.createSpan({ text: "Simple", cls: "slider-label" });
 
         // Points counter
-        const pointsDisplay = qualitySection.createEl("div", { cls: "preview-points-display" });
-        const pointsIcon = pointsDisplay.createEl("span", { cls: "points-icon" });
+        const pointsDisplay = qualitySection.createDiv({ cls: "preview-points-display" });
+        const pointsIcon = pointsDisplay.createSpan({ cls: "points-icon" });
         createSvgIcon(pointsIcon, 14, 14, SVG_ICONS.target);
-        const pointsText = pointsDisplay.createEl("span", { cls: "points-text" });
+        const pointsText = pointsDisplay.createSpan({ cls: "points-text" });
 
         // Edge style badge
-        const edgeInfoEl = contentEl.createEl("div", { cls: "preview-edge-badge" });
-        const edgeIcon = edgeInfoEl.createEl("span", { cls: "edge-icon" });
+        const edgeInfoEl = contentEl.createDiv({ cls: "preview-edge-badge" });
+        const edgeIcon = edgeInfoEl.createSpan({ cls: "edge-icon" });
         createSvgIcon(edgeIcon, 12, 12, SVG_ICONS.pulse);
-        edgeInfoEl.createEl("span", {
+        edgeInfoEl.createSpan({
             text: "Auto-detecting curve style...",
             cls: "edge-info-text",
         });
@@ -776,13 +776,13 @@ class TolerancePreviewModal extends Modal {
         });
 
         // Button container
-        const buttonContainer = contentEl.createEl("div", { cls: "preview-button-container" });
+        const buttonContainer = contentEl.createDiv({ cls: "preview-button-container" });
 
         const cancelBtn = buttonContainer.createEl("button", {
             cls: "preview-cancel-btn",
         });
         createSvgIcon(cancelBtn, 14, 14, SVG_ICONS.trash);
-        cancelBtn.createEl("span", { text: "Discard" });
+        cancelBtn.createSpan({ text: "Discard" });
         cancelBtn.addEventListener("click", () => {
             // Delete the drawn elements and close
             if (this.currentElementIds.length > 0) {
@@ -795,7 +795,7 @@ class TolerancePreviewModal extends Modal {
             cls: "mod-cta preview-done-btn",
         });
         createSvgIcon(doneBtn, 14, 14, SVG_ICONS.check);
-        doneBtn.createEl("span", { text: "Apply" });
+        doneBtn.createSpan({ text: "Apply" });
         doneBtn.addEventListener("click", () => {
             // Save tolerance setting
             void (async () => {
@@ -808,9 +808,9 @@ class TolerancePreviewModal extends Modal {
         });
 
         // Keyboard shortcut hint
-        const keyHint = contentEl.createEl("div", { cls: "preview-key-hint" });
+        const keyHint = contentEl.createDiv({ cls: "preview-key-hint" });
         keyHint.createEl("kbd", { text: "Enter" });
-        keyHint.createEl("span", { text: "To apply" });
+        keyHint.createSpan({ text: "To apply" });
 
         // Register keyboard handler
         this.scope.register([], "Enter", async () => {
@@ -842,7 +842,7 @@ class TolerancePreviewModal extends Modal {
      */
     private updateQualityIndicator(qualityFill: HTMLElement, qualityLabel: HTMLElement) {
         const quality = 100 - ((this.tolerance - 1) / 49 * 100);
-        qualityFill.setCssProps({ "width": `${quality}%` });
+        qualityFill.setCssProps({ "--plotter-quality-fill": `${quality}%` });
 
         // Update color based on quality level
         if (quality >= 70) {

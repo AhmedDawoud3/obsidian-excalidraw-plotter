@@ -221,6 +221,7 @@
 
 .quality-fill {
 	height: 100%;
+	width: var(--plotter-quality-fill, 0%);
 	border-radius: 3px;
 	transition: width 0.2s ease, background 0.2s ease;
 }

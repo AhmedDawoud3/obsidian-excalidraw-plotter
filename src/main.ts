@@ -20,13 +20,14 @@ export default class ExcalidrawPlotterPlugin extends Plugin {
         this.addCommand({
             id: "insert-function-graph",
             name: "Insert function graph",
-            callback: () => {
-                // Check if Excalidraw plugin is available
+            checkCallback: (checking) => {
                 if (!this.isExcalidrawPluginAvailable()) {
-                    new Notice(
-                        "Excalidraw plugin is not available. Please install and enable it first."
-                    );
-                    return;
+                    if (!checking) {
+                        new Notice(
+                            "Excalidraw plugin is not available. Please install and enable it first."
+                        );
+                    }
+                    return false;
                 }
 
                 // Check if we're in an Excalidraw view
@@ -34,14 +35,16 @@ export default class ExcalidrawPlotterPlugin extends Plugin {
                 const isExcalidrawView = leaf?.view?.getViewType() === "excalidraw";
 
                 if (!isExcalidrawView) {
-                    new Notice(
-                        "Please open an Excalidraw drawing first."
-                    );
-                    return;
+                    if (!checking) {
+                        new Notice("Please open an Excalidraw drawing first.");
+                    }
+                    return false;
                 }
 
-                // Open the graph settings modal
-                new GraphSettingsModal(this.app, this).open();
+                if (!checking) {
+                    new GraphSettingsModal(this.app, this).open();
+                }
+                return true;
             },
         });
     }
